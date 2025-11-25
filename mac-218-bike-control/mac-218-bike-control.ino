@@ -8,8 +8,8 @@
 #include <Servo.h>
 
 // pins: do not change these values
-#define SYSTEM_READY_LED_PIN 5
-#define CRANK_ACTIVITY_LED_PIN 4
+#define SYSTEM_READY_LED_PIN 4
+#define CRANK_ACTIVITY_LED_PIN 5
 #define MOTOR_ACTIVITY_LED_PIN 6
 #define CRANK_PIN 2
 #define WHEEL_PIN 3
