@@ -29,10 +29,10 @@
 
 // constants, can be tweaked
 const int startup_time = 3000;
-const int esc_initial_power = 45;
-const int esc_power_limit = 140;
-const float esc_step_up = 0.1;
-const float esc_step_down = 0.5;
+const int esc_neutral = 1100;
+const int esc_full_power = 2000;
+const int esc_step_up = 2;
+const int esc_step_down = 9;
 
 // count variables
 unsigned volatile int crank_rotations_counter;
@@ -45,7 +45,7 @@ unsigned long current_loop_time;
 unsigned long message_previous_time;
 
 // output variables
-float esc_power_output;
+int esc_output_power;
 Servo esc;
 
 /*
@@ -78,9 +78,9 @@ void setup() {
   pinMode(WHEEL_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(WHEEL_PIN), wheelInterrupt, FALLING);
   // ESC
-  esc_power_output = esc_initial_power;
-  esc.attach(ESC_PIN);
-  esc.write(0);
+  esc_output_power = esc_neutral;
+  esc.attach(ESC_PIN, esc_neutral, esc_full_power);
+  esc.writeMicroseconds(esc_neutral);
   // pause system untill ready
   long zero_time = millis();
   while (millis() < zero_time + startup_time) {
@@ -122,27 +122,27 @@ void loop() {
       && wheel_kmph <= WHEEL_MAXIMUM_SPEED) {
     // power up ESC
     digitalWrite(MOTOR_ACTIVITY_LED_PIN, HIGH);
-    if ((esc_power_output + esc_step_up) <= esc_power_limit) {
-      esc_power_output += esc_step_up;
+    if ((esc_output_power + esc_step_up) <= esc_full_power) {
+      esc_output_power += esc_step_up;
     } else {
-      esc_power_output = esc_power_limit;
+      esc_output_power = esc_full_power;
     }    
   } else {
     // power down ESC
     digitalWrite(MOTOR_ACTIVITY_LED_PIN, LOW);
-    if (esc_power_output - esc_step_down >= esc_initial_power) {
-      esc_power_output -= esc_step_down;
+    if (esc_output_power - esc_step_down >= esc_neutral) {
+      esc_output_power -= esc_step_down;
     } else {
-      esc_power_output = esc_initial_power;
+      esc_output_power = esc_neutral;
     }
   }
-  esc.write((int)esc_power_output);
+  esc.writeMicroseconds(esc_output_power);
 
   // display message
   if (current_loop_time - message_previous_time >= MESSAGE_MAXIMUM_INTERVAL) {
     message_previous_time = current_loop_time;
     Serial.print("ESC power output: ");
-    Serial.print(esc_power_output);
+    Serial.print(esc_output_power);
     Serial.print(" crank count: ");
     Serial.print(crank_rotations_counter);
     Serial.print(" wheel count: ");
