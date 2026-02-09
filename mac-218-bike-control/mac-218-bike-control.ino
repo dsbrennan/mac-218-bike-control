@@ -18,6 +18,7 @@
 // safety: do not change these values
 #define CRANK_PASS_ACTIVITY_DELAY 500
 #define CRANK_PASS_MAXIMUM_DELAY 3000
+#define WHEEL_PASS_MAXIMUM_DELAY 3000
 #define WHEEL_MAXIMUM_SPEED 25.0
 
 // bike: crank radius 0.175m, wheel radius 0.33m
@@ -55,15 +56,6 @@ Servo esc;
 void setup() {
   // serial
   Serial.begin(9600);
-  // set default values
-  crank_rotations_counter = 0;
-  wheel_rotations_counter = 0;
-  crank_interrupt_current_time = 0;
-  crank_interrupt_previous_time = 0;
-  wheel_interrupt_current_time = 0;
-  wheel_interrupt_previous_time = 0;
-  current_loop_time = 0;
-  message_previous_time = 0;
   // status LEDs
   pinMode(SYSTEM_READY_LED_PIN, OUTPUT);
   digitalWrite(SYSTEM_READY_LED_PIN, LOW);
@@ -86,6 +78,15 @@ void setup() {
   while (millis() < zero_time + startup_time) {
     delay(1000);
   }
+  // set default values
+  crank_rotations_counter = 0;
+  wheel_rotations_counter = 0;
+  crank_interrupt_current_time = 0;
+  crank_interrupt_previous_time = 0;
+  wheel_interrupt_current_time = 0;
+  wheel_interrupt_previous_time = 0;
+  current_loop_time = 0;
+  message_previous_time = 0;
   // activate system ready LED
   digitalWrite(SYSTEM_READY_LED_PIN, HIGH);
   Serial.println("System Ready");
@@ -96,13 +97,16 @@ void setup() {
   ---------------------
 */
 void loop() {
+  // get current reference time
+  current_loop_time = millis();
+
   // show crank activity LED
   digitalWrite(CRANK_ACTIVITY_LED_PIN, (current_loop_time - crank_interrupt_current_time <= CRANK_PASS_ACTIVITY_DELAY ? HIGH : LOW));
 
   // calculate crank speed
   float crank_kmph = 0;
   float crank_rotation_time = crank_interrupt_current_time - crank_interrupt_previous_time;
-  if (crank_rotation_time > 1) {
+  if (crank_rotation_time > 1 && current_loop_time  - crank_interrupt_current_time < CRANK_PASS_MAXIMUM_DELAY) {
     float crank_rpm = 60.0 / (crank_rotation_time / 1000);
     crank_kmph = (crank_rpm * 60 * CRANK_CIRCUMFORANCE) / 1000;
   }
@@ -110,13 +114,12 @@ void loop() {
   // calculate wheel speed
   float wheel_kmph = 0;
   float wheel_rotation_time = wheel_interrupt_current_time - wheel_interrupt_previous_time;
-  if (wheel_rotation_time > 1) {
+  if (wheel_rotation_time > 1 && current_loop_time - wheel_interrupt_current_time < WHEEL_PASS_MAXIMUM_DELAY) {
     float wheel_rpm = 60.0 / (wheel_rotation_time / 1000);
     wheel_kmph = (wheel_rpm * 60 * WHEEL_CIRCUMFORANCE) / 1000;
   }
 
   // crank interrupt within maximum delay
-  current_loop_time = millis();
   if (crank_interrupt_current_time > startup_time && crank_interrupt_previous_time > startup_time
       && current_loop_time - crank_interrupt_current_time <= CRANK_PASS_MAXIMUM_DELAY
       && wheel_kmph <= WHEEL_MAXIMUM_SPEED) {
