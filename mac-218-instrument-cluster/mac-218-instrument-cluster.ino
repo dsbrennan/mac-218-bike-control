@@ -1,7 +1,9 @@
 /**
  *  Original Author: D S Brennan (github.com/dsbrennan)
+ *  Current transducer to power code by Andy Smith
  *  Created: 13/01/2025
- *
+ *  Updated: 10/02/2026
+ *  
  *  Copyright 2025, MIT Licence
  **/
 #include "Arduino_GigaDisplay_GFX.h"
@@ -10,7 +12,9 @@
 
 // pins
 #define CRANK_PIN 2
-#define WHEEL_PIN 3
+#define WHEEL_COUNTER_PIN 3
+#define WHEEL_DIRECTION_PIN 6
+#define CURRENT_TRANSDUCER_PIN A0
 
 // colours
 #define COLOUR_BLACK 0x0000
@@ -50,13 +54,27 @@
 #define DIAL_COUNTDOWN_Y_POSITION 96 // SCREEN_HEIGHT /  5
 #define DIAL_COUNTDOWN_RADIUS 80 // SCREEN_HEIGHT / 6
 #define DIAL_COUNTDOWN_TEXT_SCALE 9
+#define DIAL_CURRENT_X_POSITION 700
+#define DIAL_CURRENT_Y_POSITION 96
+#define DIAL_CURRENT_RADIUS 80
+#define DIAL_CURRENT_TEXT_SCALE 9
+#define DIAL_DIRECTION_X_POSITION 675
+#define DIAL_DIRECTION_Y_POSITION 440
+#define DIAL_DIRECTION_TEXT_SIZE 3
 #define DIAL_STATUS_Y_POSITION 440 // SCREEN_HEIGHT / 4 * 3
 #define DIAL_STATUS_TEXT_SIZE 3
+
+// current transducer
+#define CURRENT_TRANSDUCER_VOLTAGE_REFERENCE 5 // analogue voltage reference
+#define CURRENT_TRANSDUCER_ADC_MAXIMUM 1023 // maximum ADC value
+#define CURRENT_TRANSDUCER_MOTOR_VOLTAGE 12.6 // voltage of rig motor
+#define CURRENT_TRANSDUCER_SHUNT_RESISTOR 160 // shunt resister value
+#define CURRENT_TRANSDUCER_CONVERSION_RATIO 1000 // LEM output ratio 1:1000
 
 // control system
 #define CRANK_PASS_MAXIMUM_DELAY 1500 // crank_pass_maximum_delay in student code
 #define ROTATION_TIME_LIMIT 30000 // wheel_rotation_time in student code
-#define CRANK_CIRCUMFORANCE 0.5 // not in student code
+#define CRANK_CIRCUMFORANCE 0.05 // not in student code
 #define WHEEL_CIRCUMFORANCE 2.0 // wheel_circumforance in student code
 #define TOUCH_RESET_MINIMUM_DELAY 500 // not in student code
 #define TOUCH_RESET_MAXIMUM_DELAY 1000 // not in student code
@@ -73,10 +91,14 @@ unsigned volatile long crank_interrupt_current_time;
 unsigned volatile long crank_interrupt_previous_time;
 unsigned volatile long wheel_interrupt_current_time;
 unsigned volatile long wheel_interrupt_previous_time;
+unsigned volatile long wheel_direction_interrupt_time;
+unsigned volatile int wheel_counter_enabled;
+unsigned volatile int wheel_direction;
 unsigned long current_loop_time;
 unsigned long timer_activation_time;
 signed int timer_activation_count;
 signed int timer_deactivation_count;
+double timer_maximum_current;
 
 // previous arm positions
 uint16_t previous_crank_arm_inside_x = 0;
@@ -102,16 +124,23 @@ void setup() {
   crank_interrupt_previous_time = 0;
   wheel_interrupt_current_time = 0;
   wheel_interrupt_previous_time = 0;
+  wheel_direction_interrupt_time = 0;
+  wheel_counter_enabled = 1;
+  wheel_direction = 0;
   current_loop_time = 0;
   timer_activation_time = 0;
   timer_activation_count = -1;
   timer_deactivation_count = -1;
+  timer_maximum_current = 0;
   // setup crank sensor
   pinMode(CRANK_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(CRANK_PIN), crankInterrupt, FALLING);
-  // setup wheel sensor
-  pinMode(WHEEL_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(WHEEL_PIN), wheelInterrupt, FALLING);
+  // setup wheel counter sensor
+  pinMode(WHEEL_COUNTER_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(WHEEL_COUNTER_PIN), wheelCounterInterrupt, FALLING);
+  // setup wheel direction sensor
+  pinMode(WHEEL_DIRECTION_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(WHEEL_DIRECTION_PIN), wheelDirectionInterrupt, FALLING);
   // setup touch
   touchDetector.begin();
   touchDetector.onDetect(touchInterrupt);
@@ -168,6 +197,13 @@ void setup() {
   displayCenteredText(
     DIAL_COUNTDOWN_X_POSITION,  DIAL_COUNTDOWN_Y_POSITION + 5, numerical_text, COLOUR_WHITE, COLOUR_GRAY, DIAL_COUNTDOWN_TEXT_SCALE
   );
+  itoa(0, numerical_text, 10);
+  display.fillCircle(DIAL_CURRENT_X_POSITION, DIAL_CURRENT_Y_POSITION, DIAL_CURRENT_RADIUS, COLOUR_GRAY);
+  displayCenteredText(
+    DIAL_CURRENT_X_POSITION, DIAL_CURRENT_Y_POSITION, numerical_text, COLOUR_WHITE, COLOUR_GRAY, DIAL_CURRENT_TEXT_SCALE
+  );
+  // direction
+  displayCenteredText(DIAL_DIRECTION_X_POSITION, DIAL_DIRECTION_Y_POSITION, "detecting", COLOUR_WHITE, COLOUR_BLACK, DIAL_DIRECTION_TEXT_SIZE);
   // system status
   displayCenteredText(DIAL_X_POSITION, DIAL_STATUS_Y_POSITION, "system ready", COLOUR_WHITE, COLOUR_BLACK, DIAL_STATUS_TEXT_SIZE);
 }
@@ -194,6 +230,7 @@ void loop() {
     timer_activation_time = 0;
     timer_activation_count = -1;
     timer_deactivation_count = -1;
+    timer_maximum_current = 0;
     Serial.println("system reset");
   }
   if(
@@ -232,6 +269,20 @@ void loop() {
     float rph_value = rpm_value * 60;
     float rph_meter = rph_value * WHEEL_CIRCUMFORANCE;
     wheel_speed = rph_meter / 1000;
+  }
+
+  /*
+    Power Monitoring
+    -------------------------
+    Monitor the voltage, power, and amps being drawn
+  */
+  double current_transducer_value = analogRead(CURRENT_TRANSDUCER_PIN);
+  float voltage = (current_transducer_value / CURRENT_TRANSDUCER_ADC_MAXIMUM) * CURRENT_TRANSDUCER_VOLTAGE_REFERENCE;
+  double power = CURRENT_TRANSDUCER_MOTOR_VOLTAGE * ((voltage / CURRENT_TRANSDUCER_SHUNT_RESISTOR) * CURRENT_TRANSDUCER_CONVERSION_RATIO);
+  double current = power / voltage;
+  bool timer_active = timer_activation_time > 0 && current_loop_time < timer_activation_time + ROTATION_TIME_LIMIT;
+  if(timer_active && current > timer_maximum_current){
+    timer_maximum_current = current;
   }
 
   /*
@@ -301,8 +352,7 @@ void loop() {
   // canvas -> display
   display.drawBitmap(DIAL_X_POSITION - (canvas.width() / 2), DIAL_Y_POSITION - ((canvas.height() / 3) * 2), canvas.getBuffer(), canvas.width(), canvas.height(), COLOUR_GREEN);
   // number of rotations
-  char numerical_text[16];
-  bool timer_active = timer_activation_time > 0 && current_loop_time < timer_activation_time + ROTATION_TIME_LIMIT;
+  char numerical_text[16];  
   itoa((timer_active ? wheel_rotation_counter : timer_deactivation_count) - timer_activation_count, numerical_text, 10);
   display.fillCircle(DIAL_X_POSITION, DIAL_Y_POSITION, DIAL_ROTATION_COUNTER_RADIUS, timer_active ? COLOUR_RED : COLOUR_GRAY);
   displayCenteredText(
@@ -314,20 +364,20 @@ void loop() {
   displayCenteredText(
     DIAL_COUNTDOWN_X_POSITION,  DIAL_COUNTDOWN_Y_POSITION + 5, numerical_text, COLOUR_WHITE, timer_active ? COLOUR_GREEN : COLOUR_GRAY, DIAL_COUNTDOWN_TEXT_SCALE
   );
+  // current
+  itoa(timer_active ? current : timer_maximum_current, numerical_text, 10);
+  display.fillCircle(DIAL_CURRENT_X_POSITION, DIAL_CURRENT_Y_POSITION, DIAL_CURRENT_RADIUS, timer_active ? COLOUR_GREEN : COLOUR_GRAY);
+  displayCenteredText(
+    DIAL_CURRENT_X_POSITION, DIAL_CURRENT_Y_POSITION + 5, numerical_text, COLOUR_WHITE, timer_active ? COLOUR_GREEN : COLOUR_GRAY, DIAL_CURRENT_TEXT_SCALE
+  );
+  // wheel direction
+  char direction[13];
+  strcpy(direction, timer_active ? (wheel_direction == 1 ? "  clockwise  " : "anticlockwise") : "  detecting  ");
+  displayCenteredText(DIAL_DIRECTION_X_POSITION, DIAL_DIRECTION_Y_POSITION, direction, COLOUR_WHITE, COLOUR_BLACK, DIAL_DIRECTION_TEXT_SIZE);
   // system status
   char status[12];
   strcpy(status, timer_active ? "  counting  " : (timer_deactivation_count - timer_activation_count > 0 ? "  complete  " : "system ready"));
   displayCenteredText(DIAL_X_POSITION, DIAL_STATUS_Y_POSITION, status, COLOUR_WHITE, COLOUR_BLACK, DIAL_STATUS_TEXT_SIZE);
-
-  // simulate
-  if (current_loop_time - touch_interrupt_time > 13000){
-    crank_interrupt_previous_time = current_loop_time - 1000;
-    crank_interrupt_current_time = current_loop_time;
-    wheel_rotation_counter = (current_loop_time - 13000) / 2000;
-    float acceleration = 10000.0 - (((current_loop_time - touch_interrupt_time - 13000.0)/1000.0)*500.0);
-    wheel_interrupt_previous_time = current_loop_time - (acceleration > 290 ? acceleration : 290);
-    wheel_interrupt_current_time = current_loop_time;
-  }
 
   // sleep thread
   delay(50);
@@ -343,13 +393,25 @@ void crankInterrupt(){
 }
 
 /*
-  Wheel Sensor Interrupt
+  Wheel Counter Sensor Interrupt
   ---------------------
 */
-void wheelInterrupt(){
-  wheel_rotation_counter = wheel_rotation_counter + 1;
-  wheel_interrupt_previous_time = wheel_interrupt_current_time;
-  wheel_interrupt_current_time = millis();
+void wheelCounterInterrupt(){
+  if (wheel_counter_enabled == 1){
+    wheel_rotation_counter = wheel_rotation_counter + 1;
+    wheel_interrupt_previous_time = wheel_interrupt_current_time;
+    wheel_interrupt_current_time = millis();
+    wheel_counter_enabled = 0;
+    wheel_direction = ((wheel_interrupt_current_time - wheel_direction_interrupt_time) < (wheel_direction_interrupt_time - wheel_interrupt_previous_time) ? 1 : 0);
+  }
+}
+
+/*
+  Wheel Direction Sensor Input
+*/
+void wheelDirectionInterrupt(){
+  wheel_counter_enabled = 1;
+  wheel_direction_interrupt_time = millis();
 }
 
 /*
