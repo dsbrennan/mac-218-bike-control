@@ -1,6 +1,7 @@
 /**
  *  Original Author: D S Brennan (github.com/dsbrennan)
  *  Created: 20/02/2025
+ *  Updated: 30/10/2025
  *
  *  Copyright 2025, MIT Licence
  **/
@@ -47,8 +48,7 @@ void setup() {
   delay(DELAY_UNIT);
 
   // turn on esc
-
-  Serial.println("Turn on ESC: hold down the SET button and power button untill it beeps");
+  Serial.println("Turn on ESC: hold down the power button untill it you see the button blinking");
   delay(5 * DELAY_UNIT);
 
   // set neutral position
