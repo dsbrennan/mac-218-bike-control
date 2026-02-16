@@ -74,8 +74,8 @@
 // control system
 #define CRANK_PASS_MAXIMUM_DELAY 1500 // crank_pass_maximum_delay in student code
 #define ROTATION_TIME_LIMIT 30000 // wheel_rotation_time in student code
-#define CRANK_CIRCUMFORANCE 0.05 // not in student code
-#define WHEEL_CIRCUMFORANCE 2.0 // wheel_circumforance in student code
+#define CRANK_CIRCUMFORANCE 0.05 // crank_circumforance in student code
+#define WHEEL_CIRCUMFORANCE 2.0734 // wheel_circumforance in student code
 #define TOUCH_RESET_MINIMUM_DELAY 500 // not in student code
 #define TOUCH_RESET_MAXIMUM_DELAY 1000 // not in student code
 
