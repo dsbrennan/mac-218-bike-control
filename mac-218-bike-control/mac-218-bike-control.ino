@@ -18,6 +18,7 @@
 // safety: do not change these values
 #define CRANK_PASS_ACTIVITY_DELAY 500
 #define CRANK_PASS_MAXIMUM_DELAY 3000
+#define WHEEL_PASS_MINIMUM_DELAY 200
 #define WHEEL_PASS_MAXIMUM_DELAY 3000
 #define WHEEL_MAXIMUM_SPEED 25.0
 
@@ -175,7 +176,9 @@ void crankInterrupt() {
   ---------------------
 */
 void wheelInterrupt() {
-  wheel_rotations_counter = wheel_rotations_counter + 1;
-  wheel_interrupt_previous_time = wheel_interrupt_current_time;
-  wheel_interrupt_current_time = millis();
+  if (millis() - wheel_interrupt_current_time > WHEEL_PASS_MINIMUM_DELAY){
+    wheel_rotations_counter = wheel_rotations_counter + 1;
+    wheel_interrupt_previous_time = wheel_interrupt_current_time;
+    wheel_interrupt_current_time = millis();
+  }
 }
