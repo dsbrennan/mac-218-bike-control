@@ -1,5 +1,5 @@
-# MEC 217 E-Bike Control
-This repository contains the example [Arduino](https://www.arduino.cc/) code for the University of Sheffield MEC 217 module. The premise of the control portion of the module is to build an e-bike control system. When a user is pedalling the bike, the control system will power up the motor to a predefined maximum speed and maintain this speed whilst the user is pedalling. If the user stops pedalling the system must smoothly power down the motor.
+# MAC 218 E-Bike Control
+This repository contains the example [Arduino](https://www.arduino.cc/) code for the University of Sheffield MAC 218 module. The premise of the control portion of the module is to build an e-bike control system. When a user is pedalling the bike, the control system will power up the motor to a predefined maximum speed and maintain this speed whilst the user is pedalling. If the user stops pedalling the system must smoothly power down the motor.
 
 ## System parameters
 The system will only activate powering up the motor once it has detected that the bike is being pedalled by a user. The system must only power up the motor to make the wheel of the bike turn at the predefined maximum speed. The wheel must not exceed this predefined maximum speed. Once the wheel has reached the predefined maximum speed, it must be maintained at this speed as long as the user is still pedalling the bike. If at any point, the user stops pedalling the bike, the control system must smoothly power down the motor to a stop.
