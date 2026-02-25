@@ -279,7 +279,7 @@ void loop() {
   double current_transducer_value = analogRead(CURRENT_TRANSDUCER_PIN);
   float voltage = (current_transducer_value / CURRENT_TRANSDUCER_ADC_MAXIMUM) * CURRENT_TRANSDUCER_VOLTAGE_REFERENCE;
   double power = CURRENT_TRANSDUCER_MOTOR_VOLTAGE * ((voltage / CURRENT_TRANSDUCER_SHUNT_RESISTOR) * CURRENT_TRANSDUCER_CONVERSION_RATIO);
-  double current = power / voltage;
+  double current = power / CURRENT_TRANSDUCER_MOTOR_VOLTAGE;
   bool timer_active = timer_activation_time > 0 && current_loop_time < timer_activation_time + ROTATION_TIME_LIMIT;
   if(timer_active && current > timer_maximum_current){
     timer_maximum_current = current;
