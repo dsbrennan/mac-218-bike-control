@@ -1,9 +1,9 @@
 /**
  *  Original Author: D S Brennan (github.com/dsbrennan)
  *  Created: 29/08/2023
- *  Updated: 30/10/2025
+ *  Updated: 16/02/2026
  *
- *  Copyright 2023 - 2025, MIT Licence
+ *  Copyright 2023 - 2026, MIT Licence
  **/
 #include <Servo.h>
 
@@ -29,7 +29,8 @@
 // debug
 #define MESSAGE_MAXIMUM_INTERVAL 1000
 
-// constants, can be tweaked
+// constants, most can be tweaked but
+// do not change the esc_neutral value
 const int startup_time = 3000;
 const int esc_neutral = 1100;
 const int esc_full_power = 2000;
