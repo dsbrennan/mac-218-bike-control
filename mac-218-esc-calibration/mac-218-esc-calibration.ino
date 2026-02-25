@@ -1,6 +1,7 @@
 /**
  *  Original Author: D S Brennan (github.com/dsbrennan)
  *  Created: 20/02/2025
+ *  Updated: 30/10/2025
  *
  *  Copyright 2025, MIT Licence
  **/
@@ -15,10 +16,10 @@
 // delays
 #define DELAY_UNIT 5000
 
-// esc constants
-const int esc_neutral_power = 45;
-const int esc_forward_power = 180;
-const int esc_reverse_power = 0;
+// esc constants in microseconds
+const int esc_reverse = 1000;
+const int esc_neutral = 1100;
+const int esc_forward = 2000;
 
 // output variables
 Servo esc;
@@ -40,37 +41,36 @@ void setup() {
   digitalWrite(MOTOR_ACTIVITY_LED_PIN, LOW);
 
   // attached ESC
-  esc.attach(ESC_PIN);
-  esc.write(esc_neutral_power);
+  esc.attach(ESC_PIN, esc_reverse, esc_forward);
+  esc.writeMicroseconds(esc_neutral);
   delay(DELAY_UNIT);
   Serial.println("Ready");
   delay(DELAY_UNIT);
 
   // turn on esc
-
-  Serial.println("Turn on ESC: hold down the SET button and power button untill it beeps");
+  Serial.println("Turn on ESC: hold down the power button untill it you see the button blinking");
   delay(5 * DELAY_UNIT);
 
   // set neutral position
   digitalWrite(SYSTEM_READY_LED_PIN, HIGH);
   Serial.println("Set neutral: press the set button once, the motor should beep once");
-  esc.write(esc_neutral_power);
+  esc.writeMicroseconds(esc_neutral);
   delay(DELAY_UNIT);
 
   // set full power position
   digitalWrite(CRANK_ACTIVITY_LED_PIN, HIGH);
   Serial.println("Set full: press the set button once, the motor should beep twice");
-  esc.write(esc_forward_power);
+  esc.writeMicroseconds(esc_forward);
   delay(DELAY_UNIT);
 
   // set full reverse position
   digitalWrite(MOTOR_ACTIVITY_LED_PIN, HIGH);
   Serial.println("Set reverse: press the set button once, the motor should beep thrice");
-  esc.write(esc_reverse_power);
+  esc.writeMicroseconds(esc_reverse);
   delay(DELAY_UNIT);
 
   // turn off esc
-  Serial.println("ESC calibrated: turn off the ESC");
+  Serial.println("ESC calibrated: turn off the rig power (DO NOT TURN OFF THE ESC BEFORE)");
 }
 
 /*

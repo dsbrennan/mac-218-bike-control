@@ -12,7 +12,7 @@ If we place a magnet on the crank of the pedal and then place a hall effect sens
 The same hall effect principle can be applied to determine the wheel speed of the bike. If we place a magnet on the spoke of the wheel and then place a hall effect sensor on the frame of the bike. We could use this to calculate the wheel speed of the bike to determine if we need more or less power to the ESC.
 
 ## Download
-To use this code, simply head over to the [release section](https://github.com/dsbrennan/mec217-bike-control/releases) and download the [latest zip file](https://github.com/dsbrennan/mec217-bike-control/releases/latest/download/mec217-bike-control.zip). Once the zip file is extracted on your computer, you should be able to open this up in the [Arduino IDE](https://www.arduino.cc/en/software).
+To use this code, simply head over to the [release section](https://github.com/dsbrennan/mac-218-bike-control/releases) and download the [latest zip file](https://github.com/dsbrennan/mac-218-bike-control/releases/latest/download/mac-218-bike-control.zip). Once the zip file is extracted on your computer, you should be able to open this up in the [Arduino IDE](https://www.arduino.cc/en/software).
 
 ## Pins
 The Arduino needs to communicate with certain inputs/outputs on numbered `pins`. For the purpose of this module, this combination of input/output to `pin` number have been fixed on the bike rig and cannot be changed. You must ensure that any code you upload onto the Arduino connected to the bike rig uses the numbered `pins` highlighted below.
@@ -20,8 +20,8 @@ The Arduino needs to communicate with certain inputs/outputs on numbered `pins`.
 | System | Input/Output | Purpose | Pin Number |
 | --- | --- | --- | --- |
 | Electronic speed controller (ESC) | Output | Control the speed of the motor. | 9 |
-| LED | Output | Show a visual sign that the system has completed any startup tasks and is ready to be used. | 5 |
-| LED | Output | Show a visual sign that the hall effect sensor connected to the pedal crank has been activated. | 4 |
+| LED | Output | Show a visual sign that the system has completed any startup tasks and is ready to be used. | 4 |
+| LED | Output | Show a visual sign that the hall effect sensor connected to the pedal crank has been activated. | 5 |
 | LED | Output | Show a visual sign that the system is telling the motor to power up. | 6 |
 | Hall effect sensor | Input | Detects movement on the crank - the magnet attached to pedal has physically passed by the hall effect sensor attached to the bike frame, thus detecting the bike is being pedalled. | 2 |
 | Hall effect sensor | Input | Detects movement on the wheel - the magnet attached to the wheel has physically passed by the hall effect sensor on the frame, thus providing the ability to calculate the speed that the wheel is travelling. | 3 |
@@ -29,6 +29,6 @@ The Arduino needs to communicate with certain inputs/outputs on numbered `pins`.
 
 ## Status LEDS
 There are three LEDS that show the status of the control system. Any modifications you do to the code, must use the status LED's to indicate the current status of the system:
-- Green (Pin 5) - Status: indicated that the system has completed its initialisation and is ready to be used
-- Yellow (Pin 4) - Crank activity: indicates that the crank connected to the pedal has travelled passed the sensor
+- Green (Pin 4) - Status: indicated that the system has completed its initialisation and is ready to be used
+- Yellow (Pin 5) - Crank activity: indicates that the crank connected to the pedal has travelled passed the sensor
 - Red (Pin 6) - Motor activity: indicates that the motor is currently being powered
